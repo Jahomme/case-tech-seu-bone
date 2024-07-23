@@ -5,7 +5,7 @@ export const Nav = styled.nav`
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 15%;
+  width: 15vw;
   height: 100vh;
   background-color: #333;
   color: #fff;

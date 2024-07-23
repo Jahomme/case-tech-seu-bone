@@ -5,7 +5,7 @@ export const Container = styled.div`
   justify-content: center;
   align-items: center;
   height: 80vh;
-  width: 90vw;
+  width: 100vw;
 
   h1 {
     margin: 0px 0px 40px;
@@ -32,7 +32,6 @@ export const Container = styled.div`
 
   .form-input {
     padding: 10px;
-    margin-bottom: 20px;
     border: 1px solid ${({ theme }) => theme.colors.lightGray};
     border-radius: 5px;
     width: 100%;
@@ -50,5 +49,14 @@ export const Container = styled.div`
     border: none;
     border-radius: 5px;
     cursor: pointer;
+  }
+
+  .form-card {
+    margin-bottom: 40px;
+  }
+
+  .form-error {
+    font-size: 1.5rem;
+    color: red;
   }
 `;
