@@ -9,9 +9,9 @@ export default async function DashboardLayout({
   const userData = await getUserMeLoader();
 
   return (
-    <div style={{ display: 'flex' }}>
+    <div style={{ paddingLeft: '15vw' }}>
       <DashBoardContainer data={userData} />
-      <main>{children}</main>
+      <main style={{ padding: '1rem', marginTop: '60px' }}>{children}</main>
     </div>
   );
 }

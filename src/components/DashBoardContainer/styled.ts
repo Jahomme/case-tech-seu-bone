@@ -9,6 +9,10 @@ export const Nav = styled.nav`
   height: 100vh;
   background-color: #333;
   color: #fff;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  bottom: 0;
 
   ul {
     list-style: none;

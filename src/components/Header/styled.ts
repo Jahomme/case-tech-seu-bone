@@ -3,10 +3,15 @@ import styled from 'styled-components';
 
 export const Nav = styled.nav`
   background: ${theme.colors.primary};
-  padding: 20px 10px;
+  padding: 0 10px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
 
   button {
     background-color: transparent;

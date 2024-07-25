@@ -4,10 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import React, { FormEvent, FormEventHandler, useState } from 'react';
 import { SubmitHandler, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
-import { FormCard } from './styled';
+import { Container, FormCard } from './styled';
 import ProductsNames from '../Products';
 import { SKUs } from '../../../public/assets/produtosCaseSB';
 import { calcularPrecoPrazo, consultarCep } from 'correios-brasil/dist';
+import { getFreightValue } from '@/data/services/get-freight-value';
+import { registerSaleService } from '@/data/services/sale-register-service';
+import { redirect } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 const productSchema = z.array(
   z.object({
@@ -62,8 +66,8 @@ const initialProducts = [
 const initialSale = {
   deadlineType: 'padrao' as 'base' | 'turbo' | 'superTurbo' | 'padrao',
   postCode: '',
-  freightValue: '',
-  discount: '',
+  freightValue: 0,
+  discount: 0,
   paymentMethod: '',
 };
 
@@ -72,41 +76,66 @@ export type FormFields = z.infer<typeof saleSchema>;
 export default function SaleForm() {
   const [products, setProducts] = useState(initialProducts);
   const [sale, setSale] = useState(initialSale);
-  const discountValues = {
+  const deadlineFee = {
     base: 1.0,
     padrao: 1.0,
     turbo: 1.1,
     superTurbo: 1.2,
   };
-  const totalPrice =
-    products.reduce((acc, value) => acc + value.unitPrice * value.amount, 0) *
-      discountValues[sale.deadlineType] +
-    Number(sale.freightValue);
+  const deadlineFeeToMaxDiscount = {
+    base: 0.0,
+    padrao: 0.05,
+    turbo: 0.1,
+    superTurbo: 0.2,
+  };
 
-  const freight = () => {
-    consultarCep('59020620').then((response) => console.log(response));
-    // calcularPrecoPrazo({
-    //   sCepOrigem: '81200100',
-    //   sCepDestino: '21770200',
-    //   nVlPeso: '1',
-    //   nCdFormato: '1',
-    //   nVlComprimento: '20',
-    //   nVlAltura: '20',
-    //   nVlLargura: '20',
-    //   nCdServico: ['04014', '04510'],
-    //   nVlDiametro: '0',
-    // }).then((response) => {
-    //   console.log('Frete:', response);
-    // });
+  const maxDiscount = Math.max(
+    Number(sale.freightValue),
+    products.reduce((acc, value) => acc + value.unitPrice * value.amount, 0) *
+      deadlineFeeToMaxDiscount[sale.deadlineType],
+  );
+
+  const totalPrice = (
+    products.reduce((acc, value) => acc + value.unitPrice * value.amount, 0) *
+      deadlineFee[sale.deadlineType] +
+    Number(sale.freightValue) -
+    Number(sale.discount)
+  ).toFixed(2);
+
+  const handleCheckShipping = async () => {
+    const totalWeight = Number(
+      products.reduce((acc, value) => acc + value.amount * 0.05, 0),
+    );
+
+    const data = {
+      from: {
+        postal_code: '59066080',
+      },
+      to: {
+        postal_code: sale.postCode,
+      },
+      package: {
+        height: 30,
+        width: 30,
+        length: 30,
+        weight: totalWeight,
+      },
+    };
+
+    try {
+      const freightValue = await getFreightValue(data);
+      setSale({ ...sale, freightValue: Number(freightValue[2].price) });
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    freight();
     const finalObject = {
       ...sale,
       totalPrice,
-      status: 'approved',
+      status: Number(sale.discount) > maxDiscount ? 'pending' : 'approved',
       products: products.map((product) => ({
         ...product,
         sku:
@@ -118,6 +147,16 @@ export default function SaleForm() {
     };
 
     console.log(finalObject);
+    await registerSaleService({ data: { ...finalObject } });
+    setSale(initialSale);
+    setProducts([
+      {
+        name: '',
+        amount: 0,
+        unitPrice: 0,
+      },
+    ]);
+    toast.success('Venda cadastrada com sucesso');
   };
 
   const handleRemoveProduct = (index: number) => {
@@ -140,76 +179,90 @@ export default function SaleForm() {
   return (
     <form onSubmit={onSubmit}>
       <h2>Produtos</h2>
-      {products.map((product, index) => (
-        <div key={index}>
-          <FormCard>
-            {' '}
-            <label>SKU:</label>
-            <span>
-              {productsArray.find(
-                (originalProduct) => originalProduct.produto == product.name,
-              )?.SKU ?? ''}
-            </span>
-          </FormCard>
-          <FormCard>
-            {' '}
-            <label>Nome:</label>
-            <select
-              value={product.name}
-              onChange={(e) => {
-                const selectedProduct = productsArray.find(
-                  (product) => product.produto == e.target.value,
-                );
-                setProducts((prevState) => {
-                  const newArray = [...prevState];
-                  newArray[index].name = selectedProduct?.produto ?? '';
-                  newArray[index].unitPrice =
-                    sale.paymentMethod !== 'credito'
-                      ? (selectedProduct?.preco_descontado ?? 0)
-                      : (selectedProduct?.preco_cheio ?? 0);
-
-                  return newArray;
-                });
-              }}
-            >
-              <option value="">Selecione um produto...</option>
-              <ProductsNames />
-            </select>
-          </FormCard>
-          <FormCard>
-            {' '}
-            <label>Amount:</label>
-            <input
-              type="number"
-              value={product.amount}
-              onChange={(e) => {
-                setProducts((prevState) => {
-                  const newArray = [...prevState];
-                  newArray[index].amount = Number(e.target.value) ?? 0;
-
-                  return newArray;
-                });
-              }}
-            ></input>
-          </FormCard>
-          <FormCard>
-            {' '}
-            <label>Preço Unitário:</label>
-            <span>{product.unitPrice}</span>
-          </FormCard>
-          <FormCard>
-            {' '}
-            <label>Preço Total:</label>
-            <span>{product.unitPrice * product.amount}</span>
-          </FormCard>
-          <button type="button" onClick={() => handleRemoveProduct(index)}>
-            Remover
-          </button>
-        </div>
-      ))}
       <button type="button" onClick={handleAddProduct}>
         Adicionar produto
       </button>
+
+      <Container>
+        {' '}
+        {products.map((product, index) => (
+          <div className="form-box" key={index}>
+            <div className="form-card-top-row">
+              {' '}
+              <div className="form-card-name-sku">
+                <FormCard>
+                  {' '}
+                  <label>Produto:</label>
+                  <select
+                    className="form-card-product-select"
+                    value={product.name}
+                    onChange={(e) => {
+                      const selectedProduct = productsArray.find(
+                        (product) => product.produto == e.target.value,
+                      );
+                      setProducts((prevState) => {
+                        const newArray = [...prevState];
+                        newArray[index].name = selectedProduct?.produto ?? '';
+                        newArray[index].unitPrice =
+                          sale.paymentMethod !== 'credito'
+                            ? (selectedProduct?.preco_descontado ?? 0)
+                            : (selectedProduct?.preco_cheio ?? 0);
+
+                        return newArray;
+                      });
+                    }}
+                  >
+                    <option value="">Selecione um produto...</option>
+                    <ProductsNames />
+                  </select>
+                </FormCard>
+                <FormCard>
+                  {' '}
+                  <label>SKU:</label>
+                  <span>
+                    {productsArray.find(
+                      (originalProduct) =>
+                        originalProduct.produto == product.name,
+                    )?.SKU ?? ''}
+                  </span>
+                </FormCard>
+              </div>{' '}
+              <FormCard>
+                <label>Amount:</label>
+                <input
+                  className="form-card-amount"
+                  type="number"
+                  value={product.amount}
+                  onChange={(e) => {
+                    setProducts((prevState) => {
+                      const newArray = [...prevState];
+                      newArray[index].amount = Number(e.target.value) ?? 0;
+
+                      return newArray;
+                    });
+                  }}
+                ></input>
+              </FormCard>
+            </div>
+            <div className="form-card-bottom-row">
+              {' '}
+              <FormCard>
+                {' '}
+                <label>Preço Unitário:</label>
+                <span>{product.unitPrice}</span>
+              </FormCard>
+              <FormCard>
+                {' '}
+                <label>Preço Total:</label>
+                <span>{`R$: ${(product.unitPrice * product.amount).toFixed(2)}`}</span>
+              </FormCard>
+              <button type="button" onClick={() => handleRemoveProduct(index)}>
+                Remover
+              </button>
+            </div>
+          </div>
+        ))}
+      </Container>
       <h2>Detalhes da Venda</h2>
       <div>
         {' '}
@@ -221,7 +274,7 @@ export default function SaleForm() {
             onChange={(e) => {
               setSale((prev) => ({
                 ...prev,
-                deadlineType: e.target.value as keyof typeof discountValues,
+                deadlineType: e.target.value as keyof typeof deadlineFee,
               }));
             }}
           >
@@ -241,6 +294,9 @@ export default function SaleForm() {
               setSale((prev) => ({ ...prev, postCode: e.target.value }));
             }}
           ></input>
+          <button onClick={handleCheckShipping} type="button">
+            Calc
+          </button>
           {/* {errors?.postCode && (
             <div className="form-error">{errors.postCode.message}</div>
           )} */}
@@ -260,7 +316,10 @@ export default function SaleForm() {
             type="number"
             value={sale.discount}
             onChange={(e) => {
-              setSale((prev) => ({ ...prev, discount: e.target.value }));
+              setSale((prev) => ({
+                ...prev,
+                discount: Number(e.target.value),
+              }));
             }}
           ></input>
           {/* {errors?.discount && (
@@ -304,7 +363,7 @@ export default function SaleForm() {
         <FormCard>
           {' '}
           <label>Preço Total:</label>
-          <span>{totalPrice}</span>
+          <span>{`R$: ${totalPrice}`}</span>
           {/* {errors?.totalPrice && (
             <div className="form-error">{errors.totalPrice.message}</div>
           )} */}
