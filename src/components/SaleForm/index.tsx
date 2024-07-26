@@ -1,27 +1,12 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import React, { FormEvent, FormEventHandler, useState } from 'react';
-import { SubmitHandler, useForm, useWatch } from 'react-hook-form';
-import { z } from 'zod';
+import React, { FormEvent, useState } from 'react';
 import { Container, FormCard } from './styled';
 import ProductsNames from '../Products';
 import { SKUs } from '../../../public/assets/produtosCaseSB';
-import { calcularPrecoPrazo, consultarCep } from 'correios-brasil/dist';
 import { getFreightValue } from '@/data/services/get-freight-value';
 import { registerSaleService } from '@/data/services/sale-register-service';
-import { redirect } from 'next/navigation';
 import { toast } from 'react-toastify';
-
-const productSchema = z.array(
-  z.object({
-    sku: z.string(),
-    name: z.string(),
-    amount: z.coerce.number(),
-    unitPrice: z.coerce.number(),
-    totalPrice: z.coerce.number(),
-  }),
-);
 
 export type ProductProps = {
   sku: string;
@@ -30,17 +15,6 @@ export type ProductProps = {
   unitPrice: number;
   totalPrice: number;
 }[];
-
-const saleSchema = z.object({
-  deadlineType: z.string(),
-  postCode: z.string(),
-  freightValue: z.coerce.number(),
-  discount: z.coerce.number(),
-  paymentMethod: z.string(),
-  totalPrice: z.coerce.number(),
-  status: z.string(),
-  products: productSchema,
-});
 
 export type SaleProps = {
   deadlineType: string;
@@ -70,8 +44,6 @@ const initialSale = {
   discount: 'R$ 0',
   paymentMethod: '',
 };
-
-export type FormFields = z.infer<typeof saleSchema>;
 
 export default function SaleForm() {
   const [products, setProducts] = useState(initialProducts);
@@ -131,10 +103,8 @@ export default function SaleForm() {
   };
 
   const formatCurrency = (inputValue: string): string => {
-    // Remove non-numeric characters except for the decimal point
     let cleanedValue = inputValue.replace(/[^\d.]/g, '');
 
-    // Ensure only two decimal places
     const parts = cleanedValue.split('.');
     if (parts.length > 2) {
       cleanedValue = parts[0] + '.' + parts[1].slice(0, 2);
@@ -142,7 +112,6 @@ export default function SaleForm() {
       cleanedValue = parts[0] + '.' + parts[1].slice(0, 2);
     }
 
-    // Format as currency with 'R$'
     const formattedValue = cleanedValue ? `R$ ${cleanedValue}` : '';
 
     return formattedValue;
