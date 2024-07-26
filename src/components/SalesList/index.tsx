@@ -68,15 +68,16 @@ export default function SalesList({
   //   }, 0);
   // }
 
-  const countOcurrences = initialData.data.reduce((acc, sale) => {
-    if (sale.attributes.status === 'pending') {
-      return acc + 1;
-    }
-    return acc;
-  }, 0);
+  const countOcurrences = (status: string) =>
+    initialData.data.reduce((acc, sale) => {
+      if (sale.attributes.status === status) {
+        return acc + 1;
+      }
+      return acc;
+    }, 0);
 
   userData.data.jobRole === 'manager' &&
-    countOcurrences &&
+    countOcurrences('pending') &&
     toast.warning(`Você tem ${countOcurrences} novas solicitações`, {
       toastId: 'pendingNotify',
     });
@@ -126,6 +127,8 @@ export default function SalesList({
             <option value="&sort=totalPrice:asc">Menor valor</option>
             <option value="&sort=publishedAt:desc">Mais recentes</option>
             <option value="&sort=publishedAt:asc">Mais antigo</option>
+            <option value="&sort=discount:desc">Maior desconto</option>
+            <option value="&sort=discount:asc">Menor desconto</option>
           </select>
           <button type="submit">Filtrar</button>
         </form>
@@ -183,7 +186,11 @@ export default function SalesList({
                 </div>
               </div>
             </div>
-            <h3>Status: {sale.attributes.status}</h3>
+            <h3>
+              Status: {sale.attributes.status === 'approved' && 'Aprovado'}{' '}
+              {sale.attributes.status === 'disapproved' && 'Reprovado'}{' '}
+              {sale.attributes.status === 'pending' && 'Pendente'}
+            </h3>
             {userData.data.jobRole === 'manager' &&
             sale.attributes.status === 'pending' ? (
               <>
