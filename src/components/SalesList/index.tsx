@@ -78,7 +78,7 @@ export default function SalesList({
 
   userData.data.jobRole === 'manager' &&
     countOcurrences('pending') &&
-    toast.warning(`Você tem ${countOcurrences} novas solicitações`, {
+    toast.warning(`Você tem ${countOcurrences('pending')} novas solicitações`, {
       toastId: 'pendingNotify',
     });
 

@@ -1,5 +1,6 @@
 export async function updateSaleService(saleData: any, id: number) {
-  const apiUrl = process.env.API_URL || 'http://localhost:1337';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
   const url = new URL(`/api/sales/${id}`, apiUrl);
 
   try {
