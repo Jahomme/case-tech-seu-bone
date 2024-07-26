@@ -4,7 +4,7 @@ import styled from 'styled-components';
 export const Nav = styled.nav`
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   width: 15vw;
   height: 100vh;
   background-color: #333;
@@ -20,9 +20,12 @@ export const Nav = styled.nav`
 
   a {
     display: block;
-    padding: 10px;
+    width: 15vw;
+    padding: 1.5rem;
     text-decoration: none;
     color: #fff;
+    font-size: 22px;
+    font-weight: bold;
   }
 
   a:hover {

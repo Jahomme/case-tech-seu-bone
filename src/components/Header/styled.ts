@@ -12,16 +12,33 @@ export const Nav = styled.nav`
   top: 0;
   left: 0;
   right: 0;
+  gap: 1rem;
 
   button {
     background-color: transparent;
   }
 
+  a {
+    flex: 1;
+  }
+
   div {
     display: flex;
-    color: ${theme.colors.white};
-    align-items: center;
-    text-align: center;
+    flex-direction: column;
+  }
+
+  span {
+    font-size: 22px;
+    color: white;
+    font-weight: bold;
+    line-height: 140%;
+  }
+
+  small {
+    font-size: 14px;
+    color: #fcbb19;
+    border-top: 2px solid white;
+    padding: 0 4px 0;
   }
 
   .loginButton {

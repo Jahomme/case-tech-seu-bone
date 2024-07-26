@@ -67,7 +67,7 @@ const initialSale = {
   deadlineType: 'padrao' as 'base' | 'turbo' | 'superTurbo' | 'padrao',
   postCode: '',
   freightValue: 0,
-  discount: 0,
+  discount: 'R$ 0',
   paymentMethod: '',
 };
 
@@ -99,7 +99,7 @@ export default function SaleForm() {
     products.reduce((acc, value) => acc + value.unitPrice * value.amount, 0) *
       deadlineFee[sale.deadlineType] +
     Number(sale.freightValue) -
-    Number(sale.discount)
+    parseFloat(sale.discount.replace(/^R\$\s?/, '') || '0')
   ).toFixed(2);
 
   const handleCheckShipping = async () => {
@@ -130,12 +130,34 @@ export default function SaleForm() {
     }
   };
 
+  const formatCurrency = (inputValue: string): string => {
+    // Remove non-numeric characters except for the decimal point
+    let cleanedValue = inputValue.replace(/[^\d.]/g, '');
+
+    // Ensure only two decimal places
+    const parts = cleanedValue.split('.');
+    if (parts.length > 2) {
+      cleanedValue = parts[0] + '.' + parts[1].slice(0, 2);
+    } else if (parts.length === 2) {
+      cleanedValue = parts[0] + '.' + parts[1].slice(0, 2);
+    }
+
+    // Format as currency with 'R$'
+    const formattedValue = cleanedValue ? `R$ ${cleanedValue}` : '';
+
+    return formattedValue;
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const finalObject = {
       ...sale,
+      discount: parseFloat(sale.discount.replace(/^R\$\s?/, '') || '0'),
       totalPrice,
-      status: Number(sale.discount) > maxDiscount ? 'pending' : 'approved',
+      status:
+        parseFloat(sale.discount.replace(/^R\$\s?/, '') || '0') > maxDiscount
+          ? 'pending'
+          : 'approved',
       products: products.map((product) => ({
         ...product,
         sku:
@@ -178,18 +200,21 @@ export default function SaleForm() {
 
   return (
     <form onSubmit={onSubmit}>
-      <h2>Produtos</h2>
-      <button type="button" onClick={handleAddProduct}>
-        Adicionar produto
-      </button>
+      <div style={{ display: 'flex', gap: '2rem', paddingBottom: '2rem' }}>
+        {' '}
+        <h2>Produtos</h2>
+        <button type="button" onClick={handleAddProduct}>
+          Adicionar produto
+        </button>
+      </div>
 
       <Container>
         {' '}
         {products.map((product, index) => (
           <div className="form-box" key={index}>
-            <div className="form-card-top-row">
+            <div className="form-card-row">
               {' '}
-              <div className="form-card-name-sku">
+              <div className="form-card-field">
                 <FormCard>
                   {' '}
                   <label>Produto:</label>
@@ -216,22 +241,18 @@ export default function SaleForm() {
                     <ProductsNames />
                   </select>
                 </FormCard>
-                <FormCard>
-                  {' '}
-                  <label>SKU:</label>
-                  <span>
-                    {productsArray.find(
-                      (originalProduct) =>
-                        originalProduct.produto == product.name,
-                    )?.SKU ?? ''}
-                  </span>
-                </FormCard>
+                <small>
+                  SKU:{' '}
+                  {productsArray.find(
+                    (originalProduct) =>
+                      originalProduct.produto == product.name,
+                  )?.SKU ?? ''}
+                </small>
               </div>{' '}
-              <FormCard>
+              <FormCard className="form-card-field">
                 <label>Amount:</label>
                 <input
-                  className="form-card-amount"
-                  type="number"
+                  type="text"
                   value={product.amount}
                   onChange={(e) => {
                     setProducts((prevState) => {
@@ -242,133 +263,155 @@ export default function SaleForm() {
                     });
                   }}
                 ></input>
+                <span />
               </FormCard>
             </div>
-            <div className="form-card-bottom-row">
+            <div className="form-card-row">
               {' '}
-              <FormCard>
+              <FormCard className="form-card-field">
                 {' '}
                 <label>Preço Unitário:</label>
-                <span>{product.unitPrice}</span>
+                <span>R$ {product.unitPrice.toFixed(2)}</span>
               </FormCard>
-              <FormCard>
+              <FormCard className="form-card-field">
                 {' '}
                 <label>Preço Total:</label>
-                <span>{`R$: ${(product.unitPrice * product.amount).toFixed(2)}`}</span>
+                <span>{`R$ ${(product.unitPrice * product.amount).toFixed(2)}`}</span>
               </FormCard>
-              <button type="button" onClick={() => handleRemoveProduct(index)}>
+              <button
+                className="remove"
+                type="button"
+                onClick={() => handleRemoveProduct(index)}
+              >
                 Remover
               </button>
             </div>
           </div>
         ))}
       </Container>
-      <h2>Detalhes da Venda</h2>
-      <div>
-        {' '}
-        <FormCard>
-          {' '}
-          <label>Prazo:</label>
-          <select
-            value={sale.deadlineType}
-            onChange={(e) => {
-              setSale((prev) => ({
-                ...prev,
-                deadlineType: e.target.value as keyof typeof deadlineFee,
-              }));
-            }}
-          >
-            <option value="base">Selecione um prazo...</option>
-            <option value="padrao">PADRÃO</option>
-            <option value="turbo">TURBO</option>
-            <option value="superTurbo">SUPER TURBO</option>
-          </select>
-        </FormCard>
-        <FormCard>
-          {' '}
-          <label>CEP:</label>
-          <input
-            type="text"
-            value={sale.postCode}
-            onChange={(e) => {
-              setSale((prev) => ({ ...prev, postCode: e.target.value }));
-            }}
-          ></input>
-          <button onClick={handleCheckShipping} type="button">
-            Calc
-          </button>
-          {/* {errors?.postCode && (
+      <div style={{ display: 'flex', gap: '2rem', paddingBottom: '2rem' }}>
+        <h2>Detalhes da Venda</h2>
+      </div>
+      <Container>
+        <div className="form-box">
+          <div className="form-card-row">
+            <div className="form-card-field">
+              {' '}
+              <label>Prazo:</label>
+              <select
+                value={sale.deadlineType}
+                onChange={(e) => {
+                  setSale((prev) => ({
+                    ...prev,
+                    deadlineType: e.target.value as keyof typeof deadlineFee,
+                  }));
+                }}
+              >
+                <option value="base">Selecione um prazo...</option>
+                <option value="padrao">PADRÃO</option>
+                <option value="turbo">TURBO</option>
+                <option value="superTurbo">SUPER TURBO</option>
+              </select>
+            </div>
+            <div className="form-card-row">
+              <div className="form-card-field">
+                {' '}
+                <label>CEP:</label>
+                <input
+                  type="text"
+                  value={sale.postCode}
+                  onChange={(e) => {
+                    setSale((prev) => ({
+                      ...prev,
+                      postCode: e.target.value,
+                    }));
+                  }}
+                ></input>
+              </div>
+              <button onClick={handleCheckShipping} type="button">
+                Calcular
+              </button>
+              {/* {errors?.postCode && (
             <div className="form-error">{errors.postCode.message}</div>
           )} */}
-        </FormCard>
-        <FormCard>
-          {' '}
-          <label>Valor do Frete:</label>
-          <span>{sale.freightValue}</span>
-          {/* {errors?.freightValue && (
+            </div>
+            <div className="form-card-field">
+              {' '}
+              <label>Valor do Frete:</label>
+              <span>R$ {sale.freightValue.toFixed(2)}</span>
+              {/* {errors?.freightValue && (
             <div className="form-error">{errors.freightValue.message}</div>
           )} */}
-        </FormCard>
-        <FormCard>
-          {' '}
-          <label>Desconto:</label>
-          <input
-            type="number"
-            value={sale.discount}
-            onChange={(e) => {
-              setSale((prev) => ({
-                ...prev,
-                discount: Number(e.target.value),
-              }));
-            }}
-          ></input>
-          {/* {errors?.discount && (
-            <div className="form-error">{errors.discount.message}</div>
-          )} */}
-        </FormCard>
-        <FormCard>
-          {' '}
-          <label>Forma de pagamento:</label>
-          <select
-            value={sale.paymentMethod}
-            onChange={(e) => {
-              setSale((prev) => ({ ...prev, paymentMethod: e.target.value }));
-              const novaListaProdutos = products.map((produto) => {
-                const produtoRaiz = productsArray.find(
-                  (productRaiz) => productRaiz.produto == produto.name,
-                );
-                if (produtoRaiz) {
-                  return {
-                    ...produto,
-                    unitPrice:
-                      e.target.value == 'credito'
-                        ? produtoRaiz.preco_cheio
-                        : produtoRaiz.preco_descontado,
-                  };
-                }
-                return produto;
-              });
-              setProducts(novaListaProdutos);
-            }}
-          >
-            <option value="">Selecione uma forma de pagamento...</option>
-            <option value="credito">Crédito</option>
-            <option value="pix">Pix</option>
-            <option value="boleto">Boleto</option>
-          </select>
-          {/* {errors?.paymentMethod && (
+            </div>
+          </div>
+          <div className="form-card-row">
+            <div className="form-card-field">
+              {' '}
+              <label>Forma de pagamento:</label>
+              <select
+                value={sale.paymentMethod}
+                onChange={(e) => {
+                  setSale((prev) => ({
+                    ...prev,
+                    paymentMethod: e.target.value,
+                  }));
+                  const novaListaProdutos = products.map((produto) => {
+                    const produtoRaiz = productsArray.find(
+                      (productRaiz) => productRaiz.produto == produto.name,
+                    );
+                    if (produtoRaiz) {
+                      return {
+                        ...produto,
+                        unitPrice:
+                          e.target.value == 'credito'
+                            ? produtoRaiz.preco_cheio
+                            : produtoRaiz.preco_descontado,
+                      };
+                    }
+                    return produto;
+                  });
+                  setProducts(novaListaProdutos);
+                }}
+              >
+                <option value="">Selecione uma forma de pagamento...</option>
+                <option value="credito">Crédito</option>
+                <option value="pix">Pix</option>
+                <option value="boleto">Boleto</option>
+              </select>
+              {/* {errors?.paymentMethod && (
             <div className="form-error">{errors.paymentMethod.message}</div>
           )} */}
-        </FormCard>
-        <FormCard>
-          {' '}
-          <label>Preço Total:</label>
-          <span>{`R$: ${totalPrice}`}</span>
-          {/* {errors?.totalPrice && (
+            </div>
+
+            <div className="form-card-field">
+              {' '}
+              <label>Desconto:</label>
+              <input
+                type="text"
+                placeholder="R$"
+                value={sale.discount}
+                onChange={(e) => {
+                  setSale((prev) => ({
+                    ...prev,
+                    discount: formatCurrency(e.target.value),
+                  }));
+                }}
+              ></input>
+              {/* {errors?.discount && (
+            <div className="form-error">{errors.discount.message}</div>
+          )} */}
+            </div>
+            <div className="form-card-field">
+              {' '}
+              <label>Preço Total:</label>
+              <span>{`R$ ${totalPrice}`}</span>
+              {/* {errors?.totalPrice && (
             <div className="form-error">{errors.totalPrice.message}</div>
           )} */}
-        </FormCard>
-      </div>
+            </div>
+          </div>
+        </div>
+      </Container>
       <button type="submit">Cadastrar nova venda</button>
     </form>
   );

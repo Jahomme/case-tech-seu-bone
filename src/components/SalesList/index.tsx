@@ -5,6 +5,7 @@ import { Container } from './styled';
 import { FormEvent, useState } from 'react';
 import LoadingComponent from '../LoadingComponent';
 import { getSalesData } from '@/data/services/get-sales-data';
+import { toast } from 'react-toastify';
 
 export type userData = {
   id: number;
@@ -58,12 +59,34 @@ export default function SalesList({
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState(initialData);
 
+  // function countOccurrences(arr, key, value) {
+  //   return arr.reduce((count, obj) => {
+  //     if (obj[key] === value) {
+  //       return count + 1;
+  //     }
+  //     return count;
+  //   }, 0);
+  // }
+
+  const countOcurrences = initialData.data.reduce((acc, sale) => {
+    if (sale.attributes.status === 'pending') {
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
+
+  countOcurrences &&
+    toast.warning(`Você tem ${countOcurrences} novas solicitações`, {
+      toastId: 'pendingNotify',
+    });
+
   const handleApprove = async (id: number) => {
     setIsLoading(true);
 
     await updateSaleService({ data: { status: 'approved' } }, id);
     window.location.reload();
 
+    toast.success('Venda Aprovada');
     setIsLoading(false);
   };
 
@@ -73,6 +96,7 @@ export default function SalesList({
     await updateSaleService({ data: { status: 'disapproved' } }, id);
     window.location.reload();
 
+    toast.success('Venda Reprovada');
     setIsLoading(false);
   };
 
@@ -88,64 +112,101 @@ export default function SalesList({
   };
 
   return (
-    <>
-      <h1>Vendas Cadastradas</h1>
-      <form onSubmit={handleFilterFormSubmit}>
-        <select
-          value={filterQuery}
-          onChange={(e) => setFilterQuery(e.target.value)}
-        >
-          <option value="">selecione uma opção de filtragem...</option>
-          <option value="&sort=totalPrice:desc">Maior valor</option>
-          <option value="&sort=totalPrice:asc">Menor valor</option>
-          <option value="&sort=publishedAt:desc">Mais recentes</option>
-          <option value="&sort=publishedAt:asc">Mais antigo</option>
-        </select>
-        <button type="submit">Filtrar</button>
-      </form>
-
-      {data.data.map((sale) => (
-        <Container key={sale.id}>
-          <h2>Produtos</h2>
-          {sale.attributes.products?.map((product) => (
-            <div key={product.id}>
-              {' '}
-              <h3>SKU:{product.sku}</h3>
-              <h3>Nome:{product.name}</h3>
-              <h3>Quantidade:{product.amount}</h3>
-              <h3>Preço unitário:{product.unitPrice}</h3>
-              <h3>Preço total:{product.totalPrice}</h3>
+    <Container>
+      <div className="list-filter">
+        <h1>Vendas Cadastradas</h1>
+        <form onSubmit={handleFilterFormSubmit}>
+          <select
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+          >
+            <option value="">selecione uma opção de filtragem...</option>
+            <option value="&sort=totalPrice:desc">Maior valor</option>
+            <option value="&sort=totalPrice:asc">Menor valor</option>
+            <option value="&sort=publishedAt:desc">Mais recentes</option>
+            <option value="&sort=publishedAt:asc">Mais antigo</option>
+          </select>
+          <button type="submit">Filtrar</button>
+        </form>
+      </div>
+      <div className="list-itens">
+        {data.data.map((sale) => (
+          <div className="list-item" key={sale.id}>
+            {sale.attributes.products?.map((product, index) => (
+              <div className="list-item-product" key={product.id}>
+                <h2>Produto {index + 1}</h2>
+                <h3>Nome:{product.name}</h3>
+                <small>SKU:{product.sku}</small>
+                <div className="list-item-product-row">
+                  <div>
+                    <label>Preço unitario:</label>
+                    <span>R$ {product.unitPrice}</span>
+                  </div>
+                  <div style={{ flex: '1' }}>
+                    <label>Quantidade:</label>
+                    <span>{product.amount}</span>
+                  </div>
+                  <div>
+                    <label>Preço total:</label>
+                    <span>R$ {product.totalPrice}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div className="item-sale-details">
+              <div className="list-item-product-row">
+                {' '}
+                <div>
+                  <label>Tipo de entrega:</label>
+                  <span>{sale.attributes.deadlineType}</span>
+                </div>
+                <div>
+                  <label>Forma de Pagamento:</label>
+                  <span>{sale.attributes.paymentMethod}</span>
+                </div>
+                <div></div>
+              </div>
+              <div className="list-item-product-row">
+                {' '}
+                <div>
+                  <label>Valor Frete:</label>
+                  <span>R$ {sale.attributes.freightValue.toFixed(2)}</span>
+                </div>
+                <div>
+                  <label>Valor Desconto:</label>
+                  <span>R$ {(sale.attributes.discount ?? 0).toFixed(2)}</span>
+                </div>
+                <div>
+                  <label>Valor Total:</label>
+                  <span>R$ {sale.attributes.totalPrice.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
-          ))}
-          <h2>Detalhes da Venda</h2>
-          <h3>Prazo: {sale.attributes.deadlineType}</h3>
-          <h3>Valor do Frete: {sale.attributes.freightValue}</h3>
-          <h3>Forma de Pagamento: {sale.attributes.paymentMethod}</h3>
-          <h3>Desconto: {sale.attributes.discount}</h3>
-          <h3>Preço Total da Venda: {sale.attributes.totalPrice}</h3>
-          <h3>Status: {sale.attributes.status}</h3>
-          {userData.data.jobRole === 'manager' &&
-          sale.attributes.status === 'pending' ? (
-            <>
-              <button
-                disabled={isLoading}
-                onClick={() => handleApprove(sale.id)}
-              >
-                aprovar
-              </button>
-              <button
-                disabled={isLoading}
-                onClick={() => handleDisapprove(sale.id)}
-              >
-                reprovar
-              </button>
-            </>
-          ) : (
-            ''
-          )}
-          {isLoading && <LoadingComponent />}
-        </Container>
-      ))}
-    </>
+            <h3>Status: {sale.attributes.status}</h3>
+            {userData.data.jobRole === 'manager' &&
+            sale.attributes.status === 'pending' ? (
+              <>
+                <button
+                  disabled={isLoading}
+                  onClick={() => handleApprove(sale.id)}
+                >
+                  aprovar
+                </button>
+                <button
+                  style={{ backgroundColor: '#a52d2d' }}
+                  disabled={isLoading}
+                  onClick={() => handleDisapprove(sale.id)}
+                >
+                  reprovar
+                </button>
+              </>
+            ) : (
+              ''
+            )}
+            {isLoading && <LoadingComponent />}
+          </div>
+        ))}
+      </div>
+    </Container>
   );
 }

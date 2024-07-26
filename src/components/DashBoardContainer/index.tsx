@@ -27,22 +27,18 @@ export default function DashBoardContainer({ data }: { data: HeaderProps }) {
       <ul>
         <li>
           {' '}
-          <Link href="/dashboard">INÍCIO</Link>
-        </li>
-        <li>
-          {' '}
-          <Link href="/dashboard/sales">VENDAS CADASTRADAS</Link>
+          <Link href="/dashboard">Listagem de Vendas</Link>
         </li>
         <li>
           {' '}
           {data.data.jobRole === 'seller' && (
-            <Link href="/dashboard/newSale">NOVA VENDA</Link>
+            <Link href="/dashboard/newSale">Cadastrar Venda</Link>
           )}
         </li>
         <li>
           {' '}
           {data.data.jobRole === 'manager' && (
-            <Link href="/dashboard/register">REGISTRAR NOVO VENDEDOR</Link>
+            <Link href="/dashboard/register">Registrar Vendedor</Link>
           )}
         </li>
       </ul>

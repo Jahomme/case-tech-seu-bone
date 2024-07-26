@@ -34,14 +34,14 @@ export default function Header({ data }: { data: HeaderProps }) {
       </Link>
       <div>
         {' '}
-        {data.ok ? <h1>{data.data.username}</h1> : <p>não autenticado</p>}
-        {data.ok ? (
-          <p>{data.data.jobRole === 'manager' ? 'Gerente' : 'Vendedor'}</p>
-        ) : (
-          <p>não autenticado</p>
+        {data.ok && <span>{data.data.username}</span>}
+        {data.ok && (
+          <small>
+            {data.data.jobRole === 'manager' ? 'Gerente' : 'Vendedor'}
+          </small>
         )}
-        {data.ok && <LogoutButton />}
       </div>
+      {data.ok && <LogoutButton />}
     </Nav>
   );
 }

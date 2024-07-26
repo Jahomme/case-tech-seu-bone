@@ -11,7 +11,14 @@ export default async function DashboardLayout({
   return (
     <div style={{ paddingLeft: '15vw' }}>
       <DashBoardContainer data={userData} />
-      <main style={{ padding: '1rem', marginTop: '60px' }}>{children}</main>
+      <main
+        style={{
+          padding: '1rem',
+          marginTop: '60px',
+        }}
+      >
+        {children}
+      </main>
     </div>
   );
 }
